@@ -93,9 +93,9 @@ class EventBus @JvmOverloads constructor(
     fun post(event: Any) {
         val events = subscribers[event.javaClass] ?: return
         // executed in descending order
-        for (i in (events.size-1) downTo 0) {
+        events.asReversed().forEach {
             try {
-                events[i].invoke(event)
+                it.invoke(event)
             } catch (e: Exception) {
                 exceptionHandler.handle(e)
             }
@@ -114,8 +114,8 @@ class EventBus @JvmOverloads constructor(
         val events = getSubscribedEvents(T::class.java) ?: return
         val event = supplier()
         // executed in descending order
-        for (i in (events.size-1) downTo 0) {
-            events[i].invoke(event)
+        events.forEach {
+            it.invoke(event)
         }
     }
 
