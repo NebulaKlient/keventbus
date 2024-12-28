@@ -1,5 +1,5 @@
 # KEventBus
-JVM Eventbus focused on thread-safety and performance.
+JVM Eventbus focused on thread-safety and performance. Including update to a newer kotlin version and a race condition fix.
 
 ## Registering
 **Kotlin**
