@@ -114,7 +114,7 @@ class EventBus @JvmOverloads constructor(
         val events = getSubscribedEvents(T::class.java) ?: return
         val event = supplier()
         // executed in descending order
-        events.forEach {
+        events.asReversed().forEach {
             it.invoke(event)
         }
     }
