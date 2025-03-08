@@ -26,6 +26,8 @@ test {
     useJUnitPlatform()
 }
 
+java.targetCompatibility = java.sourceCompatibility = 1.8
+
 compileKotlin {
     kotlinOptions {
         jvmTarget = "1.8"

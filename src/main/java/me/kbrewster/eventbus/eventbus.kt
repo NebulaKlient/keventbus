@@ -8,6 +8,7 @@ import me.kbrewster.eventbus.invokers.ReflectionInvoker
 import java.lang.reflect.Modifier
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentLinkedQueue
 
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER)
@@ -20,7 +21,8 @@ class EventBus @JvmOverloads constructor(
                        throw exception
                    }
                },
-        private val threadSaftey: Boolean = true) {
+        private val threadSaftey: Boolean = true
+) {
 
     class Subscriber(val obj: Any, val priority: Int, private val invoker: InvokerType.SubscriberMethod?) {
 
@@ -30,7 +32,7 @@ class EventBus @JvmOverloads constructor(
         }
 
         override fun equals(other: Any?): Boolean {
-            return other.hashCode() == this.hashCode()
+            return other === this || other.hashCode() == this.hashCode()
         }
 
         override fun hashCode(): Int {
@@ -40,7 +42,7 @@ class EventBus @JvmOverloads constructor(
     }
 
     private val subscribers: AbstractMap<Class<*>, MutableList<Subscriber>> =
-            if(threadSaftey) ConcurrentHashMap() else HashMap()
+            if (threadSaftey) ConcurrentHashMap() else HashMap()
 
     /**
      * Subscribes all of the methods marked with the `@Subscribe` annotation
@@ -67,10 +69,10 @@ class EventBus @JvmOverloads constructor(
             }
 
             val subscriberMethod = invokerType.setup(obj, obj.javaClass, parameterClazz, method)
-
             val subscriber = Subscriber(obj, sub.priority, subscriberMethod)
-            subscribers.putIfAbsent(parameterClazz, if(threadSaftey) ConcurrentSubscriberArrayList() else SubscriberArrayList())
-            subscribers[parameterClazz]!!.add(subscriber)
+            subscribers.getOrPut(parameterClazz) {
+                if (threadSaftey) ConcurrentSubscriberArrayList() else SubscriberArrayList()
+            }.add(subscriber)
         }
     }
 
@@ -91,11 +93,10 @@ class EventBus @JvmOverloads constructor(
      * that are subscribed to the events class.
      */
     fun post(event: Any) {
-        val events = subscribers[event.javaClass] ?: return
-        // executed in descending order
-        events.asReversed().forEach {
+        val events = getSubscribedEvents(event.javaClass) ?: return
+        for (i in 0..<events.size) {
             try {
-                it.invoke(event)
+                events[i].invoke(event)
             } catch (e: Exception) {
                 exceptionHandler.handle(e)
             }
@@ -113,13 +114,12 @@ class EventBus @JvmOverloads constructor(
     inline fun <reified T> post(supplier: () -> T) {
         val events = getSubscribedEvents(T::class.java) ?: return
         val event = supplier()
-        // executed in descending order
-        events.asReversed().forEach {
-            it.invoke(event)
+        for (i in 0..<events.size) {
+            events[i].invoke(event)
         }
     }
 
-    fun getSubscribedEvents(clazz: Class<*>) = subscribers[clazz]
+    fun getSubscribedEvents(clazz: Class<*>) = subscribers[clazz]?.takeIf { it.isNotEmpty() }
 
     private inline fun iterateSubclasses(obj: Any, body: (Class<*>) -> Unit) {
         var postClazz: Class<*>? = obj.javaClass

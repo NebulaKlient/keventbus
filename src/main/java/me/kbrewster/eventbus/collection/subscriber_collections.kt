@@ -9,7 +9,7 @@ class ConcurrentSubscriberArrayList : CopyOnWriteArrayList<EventBus.Subscriber>(
         if (size == 0) {
             super.add(element)
         } else {
-            var index = this.binarySearch(element, Comparator.comparingInt { obj: EventBus.Subscriber -> obj.priority })
+            var index = this.binarySearch(element, Comparator.comparingInt { obj: EventBus.Subscriber -> obj.priority }.reversed())
             if (index < 0) index = -(index + 1)
             super.add(index, element)
         }
@@ -21,7 +21,7 @@ class SubscriberArrayList : ArrayList<EventBus.Subscriber>() {
         if (size == 0) {
             super.add(element)
         } else {
-            var index = this.binarySearch(element, Comparator.comparingInt { obj: EventBus.Subscriber -> obj.priority })
+            var index = this.binarySearch(element, Comparator.comparingInt { obj: EventBus.Subscriber -> obj.priority }.reversed())
             if (index < 0) index = -(index + 1)
             super.add(index, element)
         }
