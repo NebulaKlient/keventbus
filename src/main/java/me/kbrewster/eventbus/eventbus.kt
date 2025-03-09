@@ -94,11 +94,9 @@ class EventBus @JvmOverloads constructor(
      */
     fun post(event: Any) {
         val events = getSubscribedEvents(event.javaClass) ?: return
-
-        var i = 0
-        while (i < events.size) {
+        events.forEach {
             try {
-                events[i++].invoke(event)
+                it.invoke(event)
             } catch (e: Exception) {
                 exceptionHandler.handle(e)
             }
@@ -116,10 +114,8 @@ class EventBus @JvmOverloads constructor(
     inline fun <reified T> post(supplier: () -> T) {
         val events = getSubscribedEvents(T::class.java) ?: return
         val event = supplier()
-
-        var i = 0
-        while (i < events.size) {
-            events[i++].invoke(event)
+        events.forEach {
+            it.invoke(event)
         }
     }
 
