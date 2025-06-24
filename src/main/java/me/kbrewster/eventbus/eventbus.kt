@@ -8,24 +8,19 @@ import me.kbrewster.eventbus.invokers.ReflectionInvoker
 import java.lang.reflect.Modifier
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.ConcurrentLinkedQueue
 
 @Retention(AnnotationRetention.RUNTIME)
 @Target(AnnotationTarget.FUNCTION, AnnotationTarget.PROPERTY_GETTER, AnnotationTarget.PROPERTY_SETTER)
 annotation class Subscribe(val priority: Int = 0)
 
 class EventBus @JvmOverloads constructor(
-        private val invokerType: InvokerType = ReflectionInvoker(),
-        private val exceptionHandler: ExceptionHandler = object: ExceptionHandler {
-                   override fun handle(exception: Exception) {
-                       throw exception
-                   }
-               },
-        private val threadSaftey: Boolean = true
+    private val invokerType: InvokerType = ReflectionInvoker(),
+    private val exceptionHandler: ExceptionHandler = ExceptionHandler { _, exception ->
+        throw exception
+    },
+    private val threadSaftey: Boolean = true
 ) {
-
     class Subscriber(val obj: Any, val priority: Int, private val invoker: InvokerType.SubscriberMethod?) {
-
         @Throws(Exception::class)
         operator fun invoke(arg: Any?) {
             invoker!!.invoke(arg)
@@ -38,11 +33,10 @@ class EventBus @JvmOverloads constructor(
         override fun hashCode(): Int {
             return obj.hashCode()
         }
-
     }
 
     private val subscribers: AbstractMap<Class<*>, MutableList<Subscriber>> =
-            if (threadSaftey) ConcurrentHashMap() else HashMap()
+        if (threadSaftey) ConcurrentHashMap() else HashMap()
 
     /**
      * Subscribes all of the methods marked with the `@Subscribe` annotation
@@ -97,8 +91,8 @@ class EventBus @JvmOverloads constructor(
         events.forEach {
             try {
                 it.invoke(event)
-            } catch (e: Exception) {
-                exceptionHandler.handle(e)
+            } catch (ex: Exception) {
+                exceptionHandler.handle(event, ex)
             }
         }
     }

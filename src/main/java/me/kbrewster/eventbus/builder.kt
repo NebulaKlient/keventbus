@@ -17,10 +17,8 @@ class EventBusBuilder {
     /**
      * Default: throws exception again
      */
-    var exceptionHandler: ExceptionHandler = object: ExceptionHandler {
-        override fun handle(exception: Exception) {
-            throw exception
-        }
+    var exceptionHandler: ExceptionHandler = ExceptionHandler { _, exception ->
+        throw exception
     }
 
     var threadSaftey = false
@@ -33,11 +31,9 @@ class EventBusBuilder {
         this.threadSaftey = lambda()
     }
 
-    inline fun exceptionHandler(crossinline lambda: (Exception) -> Unit) {
-        this.exceptionHandler = object: ExceptionHandler {
-            override fun handle(exception: Exception) {
-                lambda(exception)
-            }
+    inline fun exceptionHandler(crossinline lambda: (Any, Exception) -> Unit) {
+        this.exceptionHandler = ExceptionHandler { event, exception ->
+            lambda(event, exception)
         }
     }
 
