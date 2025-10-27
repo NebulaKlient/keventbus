@@ -1,5 +1,7 @@
 # KEventBus
-JVM Eventbus focused on thread-safety and performance. Including update to a newer kotlin version and a race condition fix.
+JVM Eventbus focused on thread-safety and performance. Including update to a newer kotlin version, race condition fix, and superclass subscriber inheritance.
+
+Nebla Klint private technologia
 
 ## Registering
 **Kotlin**
@@ -60,5 +62,48 @@ eventBus.unregister(this)
 ```java
 // Remove all @Subscribe 'd methods from an instance
 eventBus.unregister(this)
+```
+
+## Inheritance Support
+When registering a class, `@Subscribe` methods from superclasses are automatically registered. All `@Subscribe` methods must be `final`.
+
+**Kotlin**
+```kotlin
+open class ParentListener {
+    @Subscribe
+    final fun onEvent(event: MyEvent) {
+        // Parent handles event
+    }
+}
+
+class ChildListener : ParentListener() {
+    @Subscribe
+    final fun onOtherEvent(event: OtherEvent) {
+        // Child handles different event
+    }
+}
+
+// Registering ChildListener will register both onEvent and onOtherEvent
+eventBus.register(ChildListener())
+```
+
+**Java**
+```java
+public class ParentListener {
+    @Subscribe
+    public final void onEvent(MyEvent event) {
+        // Parent handles event
+    }
+}
+
+public class ChildListener extends ParentListener {
+    @Subscribe
+    public final void onOtherEvent(OtherEvent event) {
+        // Child handles different event
+    }
+}
+
+// Registering ChildListener will register both onEvent and onOtherEvent
+eventBus.register(new ChildListener());
 ```
 
