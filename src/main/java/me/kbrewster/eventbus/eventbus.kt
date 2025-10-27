@@ -39,52 +39,54 @@ class EventBus @JvmOverloads constructor(
         if (threadSaftey) ConcurrentHashMap() else HashMap()
 
     /**
-     * Subscribes all of the methods marked with the `@Subscribe` annotation
-     * within the `obj` instance provided to th methods first parameter class
-     *
-     * e.g. registering an instance which includes the method below will invoke
-     * that method every time EventBus#post(MessageReceivedEvent()) is called.
-     * @Subscribe
-     * fun messageReceivedEvent(event: MessageReceivedEvent) {
-     * }
-     *
+     * Subscribes all `@Subscribe` annotated methods in the object and its superclasses.
+     * All @Subscribe methods must be final.
      */
     fun register(obj: Any) {
-        for (method in obj.javaClass.declaredMethods) {
-            val sub: Subscribe = method.getAnnotation(Subscribe::class.java) ?: continue
+        var currentClass: Class<*>? = obj.javaClass
+        while (currentClass != null && currentClass != Any::class.java) {
 
-            // verification
-            val parameterClazz = method.parameterTypes[0]
-            when {
-                method.parameterCount != 1 -> throw IllegalArgumentException("Subscribed method must only have one parameter.")
-                method.returnType != Void.TYPE -> throw IllegalArgumentException("Subscribed method must be of type 'Void'. ")
-                parameterClazz.isPrimitive -> throw IllegalArgumentException("Cannot subscribe method to a primitive.")
-                parameterClazz.modifiers and (Modifier.ABSTRACT or Modifier.INTERFACE) != 0 -> throw IllegalArgumentException("Cannot subscribe method to a polymorphic class.")
+            for (method in currentClass.declaredMethods) {
+                val sub: Subscribe = method.getAnnotation(Subscribe::class.java) ?: continue
+
+                // verification
+                val parameterClazz = method.parameterTypes[0]
+                when {
+                    method.parameterCount != 1 -> throw IllegalArgumentException("Subscribed method must only have one parameter.")
+                    method.returnType != Void.TYPE -> throw IllegalArgumentException("Subscribed method must be of type 'Void'. ")
+                    parameterClazz.isPrimitive -> throw IllegalArgumentException("Cannot subscribe method to a primitive.")
+                    parameterClazz.modifiers and (Modifier.ABSTRACT or Modifier.INTERFACE) != 0 -> throw IllegalArgumentException("Cannot subscribe method to a polymorphic class.")
+                    !Modifier.isFinal(method.modifiers) -> throw IllegalArgumentException("Cannot subscribe non-final method: ${method.name}")
+                }
+
+                val subscriberMethod = invokerType.setup(obj, obj.javaClass, parameterClazz, method)
+                val subscriber = Subscriber(obj, sub.priority, subscriberMethod)
+                subscribers.getOrPut(parameterClazz) {
+                    if (threadSaftey) ConcurrentSubscriberArrayList() else SubscriberArrayList()
+                }.add(subscriber)
             }
 
-            val subscriberMethod = invokerType.setup(obj, obj.javaClass, parameterClazz, method)
-            val subscriber = Subscriber(obj, sub.priority, subscriberMethod)
-            subscribers.getOrPut(parameterClazz) {
-                if (threadSaftey) ConcurrentSubscriberArrayList() else SubscriberArrayList()
-            }.add(subscriber)
+            currentClass = currentClass.superclass
         }
     }
 
     /**
-     * Unsubscribes all `@Subscribe`'d methods inside of the `obj` instance.
+     * Unsubscribes all `@Subscribe` methods in the object and its superclasses.
      */
     fun unregister(obj: Any) {
-        for (method in obj.javaClass.declaredMethods) {
-            if (method.getAnnotation(Subscribe::class.java) == null) {
-                continue
+        var currentClass: Class<*>? = obj.javaClass
+        while (currentClass != null && currentClass != Any::class.java) {
+            for (method in currentClass.declaredMethods) {
+                if (method.getAnnotation(Subscribe::class.java) == null)
+                    continue
+                subscribers[method.parameterTypes[0]]?.remove(Subscriber(obj, -1, null))
             }
-            subscribers[method.parameterTypes[0]]?.remove(Subscriber(obj, -1, null))
+            currentClass = currentClass.superclass
         }
     }
 
     /**
-     * Posts the event instance given to all the subscribers
-     * that are subscribed to the events class.
+     * Posts the event to all subscribed listeners.
      */
     fun post(event: Any) {
         val events = getSubscribedEvents(event.javaClass) ?: return
@@ -98,12 +100,7 @@ class EventBus @JvmOverloads constructor(
     }
 
     /**
-     * Supplier is only used if there are subscribers listening to
-     * the event.
-     *
-     * Example usage: EventBus#post { ComputationallyHeavyEvent() }
-     *
-     * This allows events to only be constructed if needed.
+     * Posts an event using a supplier. The event is only constructed if there are active subscribers.
      */
     inline fun <reified T> post(supplier: () -> T) {
         val events = getSubscribedEvents(T::class.java) ?: return
@@ -114,12 +111,4 @@ class EventBus @JvmOverloads constructor(
     }
 
     fun getSubscribedEvents(clazz: Class<*>) = subscribers[clazz]?.takeIf { it.isNotEmpty() }
-
-    private inline fun iterateSubclasses(obj: Any, body: (Class<*>) -> Unit) {
-        var postClazz: Class<*>? = obj.javaClass
-        do {
-            body(postClazz!!)
-            postClazz = postClazz.superclass
-        } while (postClazz != null)
-    }
 }

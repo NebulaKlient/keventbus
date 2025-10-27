@@ -9,18 +9,10 @@ fun eventbus(lambda: EventBusBuilder.() -> Unit): EventBus {
 }
 
 class EventBusBuilder {
-    /**
-     * Default: reflection invoker
-     */
     var invokerType: InvokerType = ReflectionInvoker()
-
-    /**
-     * Default: throws exception again
-     */
     var exceptionHandler: ExceptionHandler = ExceptionHandler { _, exception ->
         throw exception
     }
-
     var threadSaftey = false
 
     fun invoker(lambda: () -> InvokerType) {

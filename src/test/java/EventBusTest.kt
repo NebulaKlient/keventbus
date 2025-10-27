@@ -11,7 +11,7 @@ class EventBusTest {
 
     private val eventBus = eventbus {
         invoker { LMFInvoker() }
-        exceptionHandler { exception -> println("Error occurred in method: ${exception.message}")  }
+        exceptionHandler { event, exception -> println("Error occurred in event $event: ${exception.message}")  }
         threadSaftey { false }
     }
 
