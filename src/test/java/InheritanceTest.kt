@@ -12,7 +12,7 @@ open class ParentListener {
     var parentValue = ""
 
     @Subscribe
-    fun onTestEvent(event: TestEvent) {
+    private fun onTestEvent(event: TestEvent) {
         parentCalled = true
         parentValue = event.value
     }
@@ -23,7 +23,7 @@ class ChildListener : ParentListener() {
     var childValue = 0
 
     @Subscribe
-    fun onAnotherEvent(event: AnotherEvent) {
+    private fun onAnotherEvent(event: AnotherEvent) {
         childCalled = true
         childValue = event.value
     }

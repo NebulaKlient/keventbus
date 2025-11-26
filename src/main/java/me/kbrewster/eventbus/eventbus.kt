@@ -59,7 +59,7 @@ class EventBus @JvmOverloads constructor(
                     !Modifier.isFinal(method.modifiers) -> throw IllegalArgumentException("Cannot subscribe non-final method: ${method.name}")
                 }
 
-                val subscriberMethod = invokerType.setup(obj, obj.javaClass, parameterClazz, method)
+                val subscriberMethod = invokerType.setup(obj, currentClass, parameterClazz, method)
                 val subscriber = Subscriber(obj, sub.priority, subscriberMethod)
                 subscribers.getOrPut(parameterClazz) {
                     if (threadSaftey) ConcurrentSubscriberArrayList() else SubscriberArrayList()
